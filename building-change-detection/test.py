@@ -28,10 +28,19 @@ def main():
                         help='')
     parser.add_argument('--save_path', type=str,
                             default='./output/PUGNet/')
+    parser.add_argument('--test-root', type=str, default=None)
+    parser.add_argument('--image-dir-a', type=str, default='A')
+    parser.add_argument('--image-dir-b', type=str, default='B')
+    parser.add_argument('--label-dir', type=str, default='label')
+    parser.add_argument('--checkpoint', type=str, default=None)
+    parser.add_argument('--output-dir', type=str, default=None)
+    parser.add_argument('--num-workers', type=int, default=4)
     opt = parser.parse_args()
     palatte = [[0,0,0], [255,255,255]]
 
-    if opt.data_name == 'LEVIR-CD':
+    if opt.test_root is not None:
+        test_root = opt.test_root
+    elif opt.data_name == 'LEVIR-CD':
         test_root = './Data/Change_Detection/LEVIR-CD_cropped256/test/'
     elif opt.data_name == 'SYSU-CD':
         test_root = './Data/Change_Detection/SYSU-CD/test/'
@@ -43,17 +52,20 @@ def main():
         test_root = './Data/Change_Detection/WHU-CD/test/'
     elif opt.data_name == 'LEVIR-CD+':
         test_root = './Data/Change_Detection/LEVIR-CD+/test/'
-    save_path = './results/' + opt.data_name + '/PUGNet/'  
+    save_path = opt.output_dir or os.path.join('./results', opt.data_name, 'PUGNet')
     os.makedirs(save_path, exist_ok=True)
     with torch.no_grad():
         Eva = Evaluator(2)
         net = PUGNet(backbone_name = opt.backbone, channel = 32).cuda()
-        model_path = opt.save_path + opt.data_name + '/' + opt.backbone + '/Seg_epoch_best.pth'
+        model_path = opt.checkpoint or os.path.join(opt.save_path, opt.data_name, opt.backbone, 'Seg_epoch_best.pth')
         net.load_state_dict(torch.load(model_path))
-        test_load = dataloader.get_loader(img_A_root = test_root + 'A/', img_B_root = test_root + 'B/',\
-                                        gt_root = test_root + 'label/', trainsize = opt.trainsize,\
+        if opt.test_root is not None:
+            test_root = opt.test_root
+        test_load = dataloader.get_loader(img_A_root = os.path.join(test_root, opt.image_dir_a) + os.sep,
+                                        img_B_root = os.path.join(test_root, opt.image_dir_b) + os.sep,
+                                        gt_root = os.path.join(test_root, opt.label_dir) + os.sep, trainsize = opt.trainsize,\
                                         palatte = palatte, mode ='test',\
-                                        batchsize = opt.batchsize, mosaic_ratio=0, num_workers=4, shuffle=False, pin_memory=True)
+                                        batchsize = opt.batchsize, mosaic_ratio=0, num_workers=opt.num_workers, shuffle=False, pin_memory=True)
     
         print("Start Testing!")
         test(test_load, net, Eva, save_path)

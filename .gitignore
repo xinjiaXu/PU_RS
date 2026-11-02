@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+pretrained_model/
+PU_RS_work_dirs/
+building-change-detection/output/
+building-change-detection/results/
+building-change-detection/train_output/
+*.log
+*.tmp

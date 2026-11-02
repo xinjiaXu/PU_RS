@@ -37,10 +37,13 @@ class Multi_Class_Segmentation_Dataset(data.Dataset):
         self.mode = mode
         self.mosaic_ratio = mosaic_ratio
         self.gt_root = gt_root
-        self.images_A = [self.image_A_root + f for f in os.listdir(self.image_A_root) if f.endswith('.png') or f.endswith('.jpg')]
-        self.images_B = [self.image_B_root + f for f in os.listdir(self.image_B_root) if f.endswith('.png') or f.endswith('.jpg')]
-        self.gts = [self.gt_root + f for f in os.listdir(self.gt_root) if f.endswith('.jpg') \
-                    or f.endswith('.png')]
+        extensions = {'.png', '.jpg', '.jpeg', '.tif', '.tiff'}
+        self.images_A = [self.image_A_root + f for f in os.listdir(self.image_A_root)
+                         if os.path.splitext(f)[1].lower() in extensions]
+        self.images_B = [self.image_B_root + f for f in os.listdir(self.image_B_root)
+                         if os.path.splitext(f)[1].lower() in extensions]
+        self.gts = [self.gt_root + f for f in os.listdir(self.gt_root)
+                    if os.path.splitext(f)[1].lower() in extensions]
         self.images_A = sorted(self.images_A)
         self.images_B = sorted(self.images_B)
         self.gts = sorted(self.gts)
@@ -61,7 +64,7 @@ class Multi_Class_Segmentation_Dataset(data.Dataset):
         elif self.mode == 'val':
             return self.transform_val(sample)
         elif self.mode == 'test':
-            file_name = self.images_A[index].split('/')[-1][:-len(".tif")]
+            file_name = os.path.splitext(os.path.basename(self.images_A[index]))[0]
             return self.transform_test(sample),file_name
         
     def load_img_and_mask(self, index):

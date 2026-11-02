@@ -117,11 +117,16 @@ if __name__ == '__main__':
                         help='the test rgb images root')
     parser.add_argument('--save_path', type=str,
                             default='./output/PUGNet/')
+    parser.add_argument('--train-root', type=str, default=None)
+    parser.add_argument('--val-root', type=str, default=None)
+    parser.add_argument('--image-dir-a', type=str, default='A')
+    parser.add_argument('--image-dir-b', type=str, default='B')
+    parser.add_argument('--label-dir', type=str, default='label')
+    parser.add_argument('--num-workers', type=int, default=2)
     opt = parser.parse_args()
 
-    save_path = opt.save_path + opt.data_name + '/' + opt.backbone + '/'
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
+    save_path = os.path.join(opt.save_path, opt.data_name, opt.backbone) + os.sep
+    os.makedirs(save_path, exist_ok=True)
 
     # build models
     Model = PUGNet(backbone_name = opt.backbone, channel = 32)
@@ -130,7 +135,9 @@ if __name__ == '__main__':
     Model_optimizer = torch.optim.Adam(Model_params, opt.lr)
 
     # set path
-    if opt.data_name == 'LEVIR-CD':
+    if opt.train_root is not None and opt.val_root is not None:
+        palatte = [[0,0,0], [255,255,255]]
+    elif opt.data_name == 'LEVIR-CD':
         opt.train_root = './Data/Change_Detection/LEVIR-CD_cropped256/train/' 
         opt.val_root = './Data/Change_Detection/LEVIR-CD_cropped256/val/'
         palatte = [[0,0,0], [255,255,255]]
@@ -152,12 +159,24 @@ if __name__ == '__main__':
         palatte = [[0,0,0], [255,255,255]]
     elif opt.data_name == 'LEVIR-CD+':
         opt.train_root = './Data/Change_Detection/LEVIR-CD+/train/' 
-        opt.val_root = './Data/Change_Detection/LEVIR-CD+/test/'
+        opt.val_root = './Data/Change_Detection/LEVIR-CD+/val/'
         palatte = [[0,0,0], [255,255,255]]
 
+    if opt.train_root is None or opt.val_root is None:
+        raise ValueError('Unsupported data_name or missing --train-root/--val-root')
 
-    train_loader = dataloader.get_loader(img_A_root = opt.train_root + 'A/', img_B_root = opt.train_root + 'B/', gt_root = opt.train_root + 'label/', trainsize = opt.trainsize, palatte = palatte, mode ='train', batchsize = opt.batchsize, mosaic_ratio=0.25, num_workers=2, shuffle=True, pin_memory=True)
-    test_loader = dataloader.get_loader(img_A_root = opt.val_root + 'A/', img_B_root = opt.val_root + 'B/', gt_root = opt.val_root + 'label/', trainsize = opt.trainsize, palatte = palatte, mode ='val', batchsize = opt.batchsize, mosaic_ratio=0, num_workers=2, shuffle=False, pin_memory=True)
+    train_loader = dataloader.get_loader(
+        img_A_root=os.path.join(opt.train_root, opt.image_dir_a) + os.sep,
+        img_B_root=os.path.join(opt.train_root, opt.image_dir_b) + os.sep,
+        gt_root=os.path.join(opt.train_root, opt.label_dir) + os.sep,
+        trainsize=opt.trainsize, palatte=palatte, mode='train', batchsize=opt.batchsize,
+        mosaic_ratio=0.25, num_workers=opt.num_workers, shuffle=True, pin_memory=True)
+    test_loader = dataloader.get_loader(
+        img_A_root=os.path.join(opt.val_root, opt.image_dir_a) + os.sep,
+        img_B_root=os.path.join(opt.val_root, opt.image_dir_b) + os.sep,
+        gt_root=os.path.join(opt.val_root, opt.label_dir) + os.sep,
+        trainsize=opt.trainsize, palatte=palatte, mode='val', batchsize=opt.batchsize,
+        mosaic_ratio=0, num_workers=opt.num_workers, shuffle=False, pin_memory=True)
     total_step = len(train_loader)
 
     logging.basicConfig(filename=save_path+'log.log', format='[%(asctime)s-%(filename)s-%(levelname)s:%(message)s]',

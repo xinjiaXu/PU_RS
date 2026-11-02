@@ -71,3 +71,15 @@ bash run_test.sh sysucd
 ```
 
 The test wrapper loads the trained checkpoint for the chosen dataset, evaluates its `test` split, and saves metrics/prediction maps under `PU_RS_work_dirs/<key>/test_predictions/`.
+
+## Parameters and FLOPs
+
+Profiling uses the PVT-v2-B4 architecture with a paired 256x256 input. It skips loading the PVT checkpoint because checkpoint values do not affect model size or operation count:
+
+```bash
+python -m pip install -r requirements_profile.txt
+CUDA_VISIBLE_DEVICES=0 python profile_model.py --device cuda:0 \
+  --output PU_RS_work_dirs/profile_256.json
+```
+
+The JSON reports `params_m` and `flops_g`, plus exact parameter and raw fvcore counts. Any unsupported operations are listed; FLOPs are partial if that list is non-empty. fvcore counts one multiply-add as one FLOP.
